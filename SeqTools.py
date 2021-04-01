@@ -117,9 +117,6 @@ def sequence_selector(seq_names,**kwargs):
                 new_files.append(f)
         seq_names = new_files
                 
-            
-        
-        
     return seq_names
 
 def get_areas(files):
@@ -149,7 +146,7 @@ def get_areas(files):
     new_areas['UK-NIR'] = areas['Northern_Ireland']
     return new_areas
         
-def fetch_fastas(filtered_seqs, cog_file, folder_name):
+def fetch_fastas(filtered_seqs, cog_file, folder_name, **kwargs):
     '''
     
     Parameters
@@ -160,57 +157,109 @@ def fetch_fastas(filtered_seqs, cog_file, folder_name):
         location of fasta file to extract data from
     folder_name : string
         what to name the folder of the output fastas
+    Optional parameters:
+        reference = None (file location of reference )
 
     Returns
     -------
     None.
 
     '''
+    reference = kwargs.get("reference",False)
     print("starting process")
-    #get list of sequence names to select
+    
+    """
+    get list of sequence names to select
+    """
     names = []
     for seq in filtered_seqs:
         names.append(seq['sequence_name'])
     
-    #add matching sequences to a list
+    """
+    add matching sequences to a list
+    """
     new_seqs = []
-    with open(cog_file, newline='') as handle:
-        for record in SeqIO.parse(handle, "fasta"):
-            if record.name in names:
-                new_seqs.append(record)
+    if(reference):
+        try:
+            with open(reference, newline='') as handle:
+                i = 0
+                for record in SeqIO.parse(handle, "fasta"):
+                    if(i == 1):
+                        print("Error, reference fasta contains more than 1 sequence")
+                        return
+                    new_seqs.append(record)
+                    i += 1
+        except:
+            print("No such fasta file at :"+reference)
+            return 0
+    
+    try:
+        with open(cog_file, newline='') as handle:
+            for record in SeqIO.parse(handle, "fasta"):
+                if record.name in names:
+                    new_seqs.append(record)
+    except:
+        print("Error: No such fasta file at"+cog_file)
+    
     print("Completed reading in sequences")
-    #checks/creates folder to store fastas
+    
+    
+    """
+    checks/creates folder to store fastas
+    """
     if not os.path.isdir(folder_name):
         os.mkdir(folder_name, 0o777)
     if not os.path.isdir(os.path.join(folder_name,"genomes")):
         os.mkdir(os.path.join(folder_name,"genomes"), 0o777)
-            
-        print("Creating folders for storage")
+    if not os.path.isdir(os.path.join(folder_name,"reference")):
+        os.mkdir(os.path.join(folder_name,"reference"), 0o777)        
+    print("Creating folders for storage")
         
-    #creats a metadata file for the fastas
+    """
+    creates a metadata file for the fastas
+    """
     with open(os.path.join(folder_name,"metadata.csv"),'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=filtered_seqs[0].keys())
         writer.writeheader()
         for seq in filtered_seqs:
             writer.writerow(seq)
+               
+    """
+    Here we write all sequences to new .fasta files in the genome
+    """
+    for idx, seq in enumerate(new_seqs):
+        print(idx, seq)
+        if (idx == 0):
+            with open(os.path.join(folder_name,"reference","_".join(seq.name.split("/"))+".fasta"), 'w',newline='') as file:
+                SeqIO.write(seq, file, 'fasta')
+        else:    
+            with open(os.path.join(folder_name,"genomes","_".join(seq.name.split("/"))+".fasta"), 'w',newline='') as file:
+                SeqIO.write(seq, file, 'fasta')
+    print("Finished writing separate fasta files")
+    
+    """
+    creates a sequences.txt file identifying the sequence name, alingment name,
+    sequence path, and alignment path
+    """       
     with open(os.path.join(folder_name,"sequences.txt"),'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter='	')
         writer.writerow(["seq_name","aln_name","seq_path","annotation_path"])
         i = 0
+            
         for seq in new_seqs:
             seq_name = "_".join(seq.name.split("/"))
             aln_name = "seq"+str(i)
-            seq_path = os.path.join(os.getcwd(),folder_name,"genomes",seq_name+".fasta")
+            if (i==0):
+                seq_path = os.path.join(os.getcwd(),folder_name,"reference",seq_name+".fasta")
+            else:
+                seq_path = os.path.join(os.getcwd(),folder_name,"genomes",seq_name+".fasta")
             annotation_path = "NA"
             writer.writerow([seq_name,aln_name,seq_path,annotation_path])
             i += 1
-            print("Writing sequence "+str(i)+" to sequences.txt")
-    for seq in new_seqs:
-        with open(os.path.join(folder_name,"genomes","_".join(seq.name.split("/"))+".fasta"), 'w',newline='') as file:
-            SeqIO.write(seq, file, 'fasta')
-    print("Finished writing separate fasta files")
+            #print("Writing sequence "+str(i)+" to sequences.txt")
+    print("Finished writing sequences.txt file")
         
-    return
+    return 1
 
 def load_fastas(folder_name):
     return

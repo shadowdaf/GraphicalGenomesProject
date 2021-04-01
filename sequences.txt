@@ -1,0 +1,4 @@
+seq_name	aln_name	seq_path	annotation_path
+England_NOTT-11D245_2020	seq0	/home/dafydd/Project/test1/reference/England_NOTT-11D245_2020.fasta	NA
+England_NOTT-11D227_2020	seq1	/home/dafydd/Project/test1/genomes/England_NOTT-11D227_2020.fasta	NA
+England_NOTT-11CC66_2020	seq2	/home/dafydd/Project/test1/genomes/England_NOTT-11CC66_2020.fasta	NA
